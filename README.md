@@ -15,8 +15,6 @@ hotel-booking-cancellation-prediction/
 │   ├── 📂 models/             # Trained models (.joblib) & metadata (.json)
 │   ├── 📂 notebooks/          # Step-by-step Jupyter notebooks (EDA to Modeling)
 │   ├── 📄 requirements.txt    # ML python dependencies
-│   ├── 📄 .env                # Local ML environment configuration
-│   ├── 📄 .env.example        # ML environment template
 │   └── 📄 .gitignore          # ML specific gitignore (large model rules)
 │
 ├── 📂 backend/                # Flask REST API backend
@@ -41,37 +39,26 @@ hotel-booking-cancellation-prediction/
 
 ## ⚙️ Environment Variables Setup
 
-Every sub-project (`ML`, `backend`, `frontend`) includes a dedicated `.env` file for local development and a `.env.example` file for Git tracking.
+Environment variables are configured locally using `.env` files. Template files (`.env.example`) are provided with parameter keys. Copy the `.env.example` file to `.env` in each respective folder and define your local values:
 
 ### 1. Backend (`backend/.env`)
-| Variable | Default Value | Description |
-|---|---|---|
-| `FLASK_APP` | `app.py` | Entry point for Flask CLI |
-| `FLASK_ENV` | `development` | Environment mode |
-| `FLASK_DEBUG` | `1` | Enable hot reload and debug output |
-| `HOST` | `127.0.0.1` | Server binding host |
-| `PORT` | `5000` | Server listening port |
-| `CORS_ORIGINS` | `http://localhost:3000` | Allowed frontend origin |
-| `MODEL_PATH` | `../ML/models/final_model.joblib` | Path to trained model |
-| `MODEL_INFO_PATH` | `../ML/models/final_model_info.json` | Path to model metadata |
-| `SECRET_KEY` | `your-secret-key` | Application secret key |
+| Variable | Description |
+|---|---|
+| `FLASK_APP` | Application entry point for Flask |
+| `FLASK_ENV` | Application environment mode (e.g. development / production) |
+| `FLASK_DEBUG` | Toggle for debug mode and automatic code reloading |
+| `HOST` | Network host interface the server binds to |
+| `PORT` | Network port number the Flask server listens on |
+| `CORS_ORIGINS` | Allowed frontend origin URL for Cross-Origin Resource Sharing |
+| `MODEL_PATH` | File path to the serialized trained model artifact |
+| `MODEL_INFO_PATH` | File path to the model metadata configuration file |
+| `SECRET_KEY` | Application secret key for session integrity and encryption |
 
 ### 2. Frontend (`frontend/.env`)
-| Variable | Default Value | Description |
-|---|---|---|
-| `NEXT_PUBLIC_API_URL` | `http://localhost:5000` | Backend Flask API URL |
-| `PORT` | `3000` | Next.js server port |
-
-### 3. ML Pipeline (`ML/.env`)
-| Variable | Default Value | Description |
-|---|---|---|
-| `DATA_PATH` | `./data` | Path to dataset directory |
-| `MODELS_PATH` | `./models` | Directory containing saved models |
-| `NOTEBOOKS_PATH` | `./notebooks` | Jupyter notebooks folder |
-| `RANDOM_SEED` | `42` | Random state for reproducibility |
-| `TEST_SIZE` | `0.2` | Test split ratio (20%) |
-| `DEFAULT_MODEL` | `xgboost` | Default production model |
-| `DECISION_THRESHOLD` | `0.5` | Classification cutoff threshold |
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | Base endpoint URL of the backend Flask API |
+| `PORT` | Local port number for the Next.js development server |
 
 ---
 
