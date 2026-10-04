@@ -1,0 +1,14 @@
+# ML .gitignore
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+__pycache__/
+*.py[cod]
+.env
+!.env.example
+
+# Models exceeding GitHub 100MB limit (use Git LFS for these)
+models/baseline_random_forest.joblib
+
+# Virtual environments if created inside ML
+venv/
+.venv/

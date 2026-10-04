@@ -1,0 +1,12 @@
+# Backend .gitignore
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+!.env.example
+*.log
+.pytest_cache/
