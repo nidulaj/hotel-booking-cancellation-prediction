@@ -2,7 +2,7 @@
 Supabase database service for customer history lookup and booking persistence.
 """
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from supabase import Client, create_client
 
 logger = logging.getLogger(__name__)
@@ -164,3 +164,131 @@ class SupabaseService:
         except Exception as e:
             logger.error("Failed to insert booking into Supabase: %s", e)
             return None
+
+    def get_all_bookings(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        email: Optional[str] = None,
+        status: Optional[str] = None,
+        hotel: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Retrieve all booking records from Supabase with optional filtering and pagination.
+        """
+        if not self.is_available:
+            logger.warning("Supabase client not available.")
+            return {"bookings": [], "count": 0, "total": 0, "error": "Database service unavailable"}
+
+        try:
+            limit = max(1, min(int(limit), 200))
+            offset = max(0, int(offset))
+
+            query = self.client.table("bookings").select("*", count="exact")
+
+            if email and str(email).strip():
+                clean_email = str(email).strip().lower()
+                query = query.ilike("email", f"%{clean_email}%")
+
+            if status and str(status).strip():
+                clean_status = str(status).strip()
+                query = query.ilike("booking_status", f"%{clean_status}%")
+
+            if hotel and str(hotel).strip():
+                clean_hotel = str(hotel).strip()
+                query = query.ilike("hotel", f"%{clean_hotel}%")
+
+            # Try ordering by created_at desc (newest first)
+            try:
+                ordered_query = query.order("created_at", desc=True)
+                response = ordered_query.range(offset, offset + limit - 1).execute()
+            except Exception as order_exc:
+                logger.info("Order by created_at not available or failed (%s). Using default order.", order_exc)
+                response = query.range(offset, offset + limit - 1).execute()
+
+            records = response.data or []
+            total = response.count if response.count is not None else len(records)
+
+            return {
+                "bookings": records,
+                "count": len(records),
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+            }
+        except Exception as e:
+            logger.error("Failed to query bookings from Supabase: %s", e)
+            return {"bookings": [], "count": 0, "total": 0, "error": str(e)}
+
+    def get_booking_by_id(self, booking_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve a single booking record by ID.
+        """
+        if not self.is_available or not booking_id:
+            return None
+
+        clean_id = str(booking_id).strip()
+        try:
+            response = self.client.table("bookings").select("*").eq("id", clean_id).execute()
+            if response.data and len(response.data) > 0:
+                return response.data[0]
+            return None
+        except Exception as e:
+            logger.error("Failed to retrieve booking by ID %s: %s", clean_id, e)
+            return None
+
+    def update_booking_status(
+        self, booking_id: str, new_status: str
+    ) -> Tuple[bool, Optional[Dict[str, Any]], Optional[str]]:
+        """
+        Update the booking_status of an existing booking in Supabase.
+        Only the booking_status field is modified.
+        """
+        if not self.is_available:
+            return False, None, "Database service is not available"
+
+        clean_id = str(booking_id).strip()
+        existing = self.get_booking_by_id(clean_id)
+        if not existing:
+            return False, None, f"Booking not found with ID: {clean_id}"
+
+        clean_status = str(new_status).strip()
+        if not clean_status:
+            return False, None, "Booking status cannot be empty"
+
+        # Normalize common status spellings
+        if clean_status.lower() in ("canceled", "cancelled"):
+            normalized_status = "Canceled"
+        elif clean_status.lower() == "confirmed":
+            normalized_status = "Confirmed"
+        else:
+            normalized_status = clean_status
+
+        try:
+            logger.info("Updating booking %s status to '%s' in Supabase...", clean_id, normalized_status)
+            response = (
+                self.client.table("bookings")
+                .update({"booking_status": normalized_status})
+                .eq("id", clean_id)
+                .execute()
+            )
+            if response.data and len(response.data) > 0:
+                updated = response.data[0]
+                logger.info("Booking %s status successfully updated to '%s'.", clean_id, normalized_status)
+                return True, updated, None
+            else:
+                return False, None, "Status update operation completed but returned no record"
+        except Exception as e:
+            logger.error("Failed to update booking status for %s: %s", clean_id, e)
+            return False, None, str(e)
+
+    def cancel_booking(
+        self, booking_id: str
+    ) -> Tuple[bool, Optional[Dict[str, Any]], Optional[str]]:
+        """
+        Convenience method to set booking_status to 'Canceled'.
+        """
+        return self.update_booking_status(booking_id, "Canceled")
+
+
+

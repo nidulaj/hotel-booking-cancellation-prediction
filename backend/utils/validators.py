@@ -191,3 +191,23 @@ def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, D
     )
 
     return True, validated, None
+
+
+# =====================================================================
+# UUID Validator
+# =====================================================================
+
+import uuid
+
+
+def is_valid_uuid(val: Any) -> bool:
+    """Validate whether input is a valid UUID string."""
+    if not val:
+        return False
+    try:
+        parsed = uuid.UUID(str(val).strip())
+        return str(parsed) == str(val).strip().lower()
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+

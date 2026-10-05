@@ -9,6 +9,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 
 from config import Config
+from routes.booking_routes import booking_bp
 from routes.prediction_routes import prediction_bp
 from services.prediction_service import PredictionService
 from services.supabase_service import SupabaseService
@@ -66,6 +67,7 @@ def create_app(config_class=Config) -> Flask:
 
     # 4. Register Blueprints
     app.register_blueprint(prediction_bp, url_prefix="/api")
+    app.register_blueprint(booking_bp, url_prefix="/api/bookings")
 
     # Convenience root and health routes
     @app.route("/", methods=["GET"])
@@ -75,7 +77,8 @@ def create_app(config_class=Config) -> Flask:
             "message": "Hotel Booking Cancellation Prediction API is running!",
             "endpoints": {
                 "health": "/api/health",
-                "predict": "/api/predict"
+                "predict": "/api/predict",
+                "bookings": "/api/bookings"
             }
         }), 200
 
