@@ -1,11 +1,18 @@
 """
 Validation utilities for the prediction endpoint.
+Validates raw frontend inputs and derives engineered features:
+- total_stay = stays_in_weekend_nights + stays_in_week_nights
+- total_guests = adults + children + babies
+- is_family = 1 if (children + babies > 0) else 0
 """
+import math
 from typing import Any, Dict, List, Tuple
 from schemas.prediction_schema import (
     ALL_FEATURES,
     BINARY_FEATURES,
     CATEGORICAL_FEATURES,
+    DERIVED_FEATURES,
+    FRONTEND_REQUIRED_FEATURES,
     NUMERICAL_FEATURES,
     VALID_CUSTOMER_TYPES,
     VALID_DEPOSIT_TYPES,
@@ -16,7 +23,7 @@ from schemas.prediction_schema import (
 
 def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, Dict[str, Any] | None]:
     """
-    Validate raw prediction input dictionary.
+    Validate raw prediction input dictionary and compute derived features.
 
     Returns:
         (is_valid, validated_data, error_response_dict)
@@ -34,8 +41,8 @@ def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, D
     invalid_fields: List[str] = []
     validated: Dict[str, Any] = {}
 
-    # Check for missing required fields
-    for field in ALL_FEATURES:
+    # Check for missing required frontend fields (excluding derived features)
+    for field in FRONTEND_REQUIRED_FEATURES:
         if field not in data or data[field] is None:
             missing_fields.append(field)
 
@@ -48,16 +55,15 @@ def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, D
             }
         }
 
-    # Validate numerical fields
-    for field in NUMERICAL_FEATURES:
+    # Validate numerical fields required from frontend
+    frontend_numerical = [f for f in NUMERICAL_FEATURES if f not in DERIVED_FEATURES]
+    for field in frontend_numerical:
         val = data.get(field)
-        # Check if convertable to float/int and is finite number
         try:
             if isinstance(val, bool):
                 invalid_fields.append(field)
                 continue
             num_val = float(val)
-            import math
             if math.isnan(num_val) or math.isinf(num_val):
                 invalid_fields.append(field)
                 continue
@@ -66,7 +72,7 @@ def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, D
             if field in ("lead_time", "stays_in_weekend_nights", "stays_in_week_nights",
                          "adults", "children", "babies", "previous_cancellations",
                          "previous_bookings_not_canceled", "required_car_parking_spaces",
-                         "total_of_special_requests", "total_stay", "total_guests"):
+                         "total_of_special_requests"):
                 if num_val < 0:
                     invalid_fields.append(field)
                     continue
@@ -83,7 +89,7 @@ def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, D
                 invalid_fields.append(field)
                 continue
 
-            if field == "adr" and num_val < -100:  # adr shouldn't be excessively negative
+            if field == "adr" and num_val < -100:
                 invalid_fields.append(field)
                 continue
 
@@ -91,8 +97,9 @@ def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, D
         except (ValueError, TypeError):
             invalid_fields.append(field)
 
-    # Validate binary fields
-    for field in BINARY_FEATURES:
+    # Validate binary fields required from frontend (is_repeated_guest)
+    frontend_binary = [f for f in BINARY_FEATURES if f not in DERIVED_FEATURES]
+    for field in frontend_binary:
         val = data.get(field)
         if isinstance(val, bool):
             validated[field] = 1 if val else 0
@@ -134,5 +141,21 @@ def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, D
                 "fields": invalid_fields
             }
         }
+
+    # Automatically compute derived features from raw booking data:
+    # 1. total_stay = stays_in_weekend_nights + stays_in_week_nights
+    validated["total_stay"] = (
+        validated["stays_in_weekend_nights"] + validated["stays_in_week_nights"]
+    )
+
+    # 2. total_guests = adults + children + babies
+    validated["total_guests"] = (
+        validated["adults"] + validated["children"] + validated["babies"]
+    )
+
+    # 3. is_family = 1 if (children + babies > 0) else 0
+    validated["is_family"] = (
+        1 if (validated["children"] + validated["babies"]) > 0 else 0
+    )
 
     return True, validated, None

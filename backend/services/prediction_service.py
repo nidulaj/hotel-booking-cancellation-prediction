@@ -152,10 +152,30 @@ class PredictionService:
             raise ModelPredictionError("Model is not loaded or unavailable.")
 
         try:
-            # 1. Explicitly construct DataFrame with canonical feature list and order
-            df = pd.DataFrame([raw_input_data])[ALL_FEATURES]
+            # 1. Ensure engineered features are derived if not already present
+            data_copy = dict(raw_input_data)
+            if "total_stay" not in data_copy:
+                data_copy["total_stay"] = float(
+                    data_copy.get("stays_in_weekend_nights", 0)
+                    + data_copy.get("stays_in_week_nights", 0)
+                )
+            if "total_guests" not in data_copy:
+                data_copy["total_guests"] = float(
+                    data_copy.get("adults", 0)
+                    + data_copy.get("children", 0)
+                    + data_copy.get("babies", 0)
+                )
+            if "is_family" not in data_copy:
+                data_copy["is_family"] = int(
+                    1
+                    if (data_copy.get("children", 0) + data_copy.get("babies", 0)) > 0
+                    else 0
+                )
 
-            # 2. Ensure categorical types are strings (specifically agent and string fields)
+            # 2. Explicitly construct DataFrame with canonical feature list and order
+            df = pd.DataFrame([data_copy])[ALL_FEATURES]
+
+            # 3. Ensure categorical types are strings (specifically agent and string fields)
             for col in CATEGORICAL_FEATURES:
                 df[col] = df[col].astype(str)
 

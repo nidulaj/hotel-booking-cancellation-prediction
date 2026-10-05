@@ -138,7 +138,8 @@ The server will start on: **`http://localhost:5000`**
 ### 2. Cancellation Prediction
 - **URL**: `POST /api/predict`
 - **Headers**: `Content-Type: application/json`
-- **Request Body**:
+- **Request Body (25 Raw Booking Features)**:
+> Note: `total_stay`, `total_guests`, and `is_family` are engineered features automatically calculated by the backend from `stays_in_weekend_nights`, `stays_in_week_nights`, `adults`, `children`, and `babies`. The frontend does not need to send them.
 ```json
 {
   "hotel": "Resort Hotel",
@@ -158,9 +159,6 @@ The server will start on: **`http://localhost:5000`**
   "adr": 120.5,
   "required_car_parking_spaces": 0,
   "total_of_special_requests": 1,
-  "total_stay": 4,
-  "total_guests": 2,
-  "is_family": 0,
   "meal": "BB",
   "country": "PRT",
   "market_segment": "Online TA",

@@ -39,8 +39,14 @@ CATEGORICAL_FEATURES = [
     "agent",
 ]
 
-# Total approved predictor features in canonical order
+# Total approved predictor features in canonical order (28 features)
 ALL_FEATURES = NUMERICAL_FEATURES + BINARY_FEATURES + CATEGORICAL_FEATURES
+
+# Engineered / derived features calculated automatically by backend from raw input
+DERIVED_FEATURES = {"total_stay", "total_guests", "is_family"}
+
+# Features strictly expected from the frontend (25 raw booking features)
+FRONTEND_REQUIRED_FEATURES = [f for f in ALL_FEATURES if f not in DERIVED_FEATURES]
 
 # Allowed sets for categories where known bounded sets are standard
 VALID_HOTELS = {"Resort Hotel", "City Hotel"}
