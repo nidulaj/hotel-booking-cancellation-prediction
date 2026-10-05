@@ -42,11 +42,23 @@ CATEGORICAL_FEATURES = [
 # Total approved predictor features in canonical order (28 features)
 ALL_FEATURES = NUMERICAL_FEATURES + BINARY_FEATURES + CATEGORICAL_FEATURES
 
-# Engineered / derived features calculated automatically by backend from raw input
+# Features looked up automatically from Supabase history by customer email
+DATABASE_HISTORY_FEATURES = {
+    "is_repeated_guest",
+    "previous_cancellations",
+    "previous_bookings_not_canceled",
+}
+
+# Features calculated automatically by backend feature engineering from raw booking data
 DERIVED_FEATURES = {"total_stay", "total_guests", "is_family"}
 
-# Features strictly expected from the frontend (25 raw booking features)
-FRONTEND_REQUIRED_FEATURES = [f for f in ALL_FEATURES if f not in DERIVED_FEATURES]
+# All features handled automatically by the backend
+AUTO_POPULATED_FEATURES = DATABASE_HISTORY_FEATURES.union(DERIVED_FEATURES)
+
+# Features strictly expected from the frontend request (excluding auto-populated features)
+FRONTEND_REQUIRED_FEATURES = [
+    f for f in ALL_FEATURES if f not in AUTO_POPULATED_FEATURES
+]
 
 # Allowed sets for categories where known bounded sets are standard
 VALID_HOTELS = {"Resort Hotel", "City Hotel"}

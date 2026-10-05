@@ -71,6 +71,13 @@ class Config:
         os.getenv("PREPROCESSOR_PATH"), "ml/models/preprocessor_unfitted"
     )
 
+    # Supabase Configuration
+    _raw_supabase_url = os.getenv("SUPABASE_URL", "")
+    if "/rest/v1" in _raw_supabase_url:
+        _raw_supabase_url = _raw_supabase_url.split("/rest/v1")[0]
+    SUPABASE_URL = _raw_supabase_url.rstrip("/")
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+
 
 class TestConfig(Config):
     """Testing configuration."""

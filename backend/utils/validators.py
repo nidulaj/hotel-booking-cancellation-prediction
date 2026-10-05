@@ -1,16 +1,19 @@
 """
 Validation utilities for the prediction endpoint.
-Validates raw frontend inputs and derives engineered features:
+Validates raw frontend inputs and calculates engineered features:
 - total_stay = stays_in_weekend_nights + stays_in_week_nights
 - total_guests = adults + children + babies
 - is_family = 1 if (children + babies > 0) else 0
 """
 import math
+import re
 from typing import Any, Dict, List, Tuple
 from schemas.prediction_schema import (
     ALL_FEATURES,
+    AUTO_POPULATED_FEATURES,
     BINARY_FEATURES,
     CATEGORICAL_FEATURES,
+    DATABASE_HISTORY_FEATURES,
     DERIVED_FEATURES,
     FRONTEND_REQUIRED_FEATURES,
     NUMERICAL_FEATURES,
@@ -19,6 +22,8 @@ from schemas.prediction_schema import (
     VALID_HOTELS,
     VALID_MONTHS,
 )
+
+EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, Dict[str, Any] | None]:
@@ -41,10 +46,18 @@ def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, D
     invalid_fields: List[str] = []
     validated: Dict[str, Any] = {}
 
-    # Check for missing required frontend fields (excluding derived features)
+    # Check for missing required frontend fields
     for field in FRONTEND_REQUIRED_FEATURES:
         if field not in data or data[field] is None:
             missing_fields.append(field)
+
+    # Email check: Either email must be provided for Supabase lookup,
+    # OR historical columns must be provided directly.
+    has_email = "email" in data and bool(data["email"])
+    has_history = all(f in data and data[f] is not None for f in DATABASE_HISTORY_FEATURES)
+
+    if not has_email and not has_history:
+        missing_fields.append("email")
 
     if missing_fields:
         return False, None, {
@@ -55,8 +68,16 @@ def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, D
             }
         }
 
+    # Validate email format if provided
+    if has_email:
+        raw_email = str(data["email"]).strip()
+        if not EMAIL_REGEX.match(raw_email):
+            invalid_fields.append("email")
+        else:
+            validated["email"] = raw_email.lower()
+
     # Validate numerical fields required from frontend
-    frontend_numerical = [f for f in NUMERICAL_FEATURES if f not in DERIVED_FEATURES]
+    frontend_numerical = [f for f in NUMERICAL_FEATURES if f not in AUTO_POPULATED_FEATURES]
     for field in frontend_numerical:
         val = data.get(field)
         try:
@@ -70,8 +91,7 @@ def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, D
 
             # Additional domain boundaries check
             if field in ("lead_time", "stays_in_weekend_nights", "stays_in_week_nights",
-                         "adults", "children", "babies", "previous_cancellations",
-                         "previous_bookings_not_canceled", "required_car_parking_spaces",
+                         "adults", "children", "babies", "required_car_parking_spaces",
                          "total_of_special_requests"):
                 if num_val < 0:
                     invalid_fields.append(field)
@@ -97,16 +117,24 @@ def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, D
         except (ValueError, TypeError):
             invalid_fields.append(field)
 
-    # Validate binary fields required from frontend (is_repeated_guest)
-    frontend_binary = [f for f in BINARY_FEATURES if f not in DERIVED_FEATURES]
-    for field in frontend_binary:
-        val = data.get(field)
-        if isinstance(val, bool):
-            validated[field] = 1 if val else 0
-        elif val in (0, 1, 0.0, 1.0, "0", "1"):
-            validated[field] = int(val)
+    # Validate manual history values if provided directly
+    if "is_repeated_guest" in data and data["is_repeated_guest"] is not None:
+        val = data["is_repeated_guest"]
+        if val in (0, 1, 0.0, 1.0, "0", "1", True, False):
+            validated["is_repeated_guest"] = 1 if val in (1, 1.0, "1", True) else 0
         else:
-            invalid_fields.append(field)
+            invalid_fields.append("is_repeated_guest")
+
+    for hist_num_col in ("previous_cancellations", "previous_bookings_not_canceled"):
+        if hist_num_col in data and data[hist_num_col] is not None:
+            try:
+                num_v = float(data[hist_num_col])
+                if num_v < 0 or math.isnan(num_v) or math.isinf(num_v):
+                    invalid_fields.append(hist_num_col)
+                else:
+                    validated[hist_num_col] = int(num_v)
+            except (ValueError, TypeError):
+                invalid_fields.append(hist_num_col)
 
     # Validate categorical fields
     for field in CATEGORICAL_FEATURES:
@@ -132,6 +160,10 @@ def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, D
             continue
 
         validated[field] = str_val
+
+    # Optional booking_status if provided by client
+    if "booking_status" in data and data["booking_status"]:
+        validated["booking_status"] = str(data["booking_status"]).strip()
 
     if invalid_fields:
         return False, None, {
@@ -159,3 +191,23 @@ def validate_prediction_input(data: Any) -> Tuple[bool, Dict[str, Any] | None, D
     )
 
     return True, validated, None
+
+
+# =====================================================================
+# UUID Validator
+# =====================================================================
+
+import uuid
+
+
+def is_valid_uuid(val: Any) -> bool:
+    """Validate whether input is a valid UUID string."""
+    if not val:
+        return False
+    try:
+        parsed = uuid.UUID(str(val).strip())
+        return str(parsed) == str(val).strip().lower()
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+
