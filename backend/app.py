@@ -11,6 +11,7 @@ from flask_cors import CORS
 from config import Config
 from routes.prediction_routes import prediction_bp
 from services.prediction_service import PredictionService
+from services.supabase_service import SupabaseService
 from utils.error_handlers import register_error_handlers
 
 
@@ -85,7 +86,12 @@ def create_app(config_class=Config) -> Flask:
             "message": "Backend is running."
         }), 200
 
-    # 5. Initialize Prediction Service and load ML artifacts
+    # 5. Initialize Prediction Service and Supabase Service
+    app.supabase_service = SupabaseService(
+        url=config_class.SUPABASE_URL,
+        key=config_class.SUPABASE_KEY,
+    )
+
     app.prediction_service = PredictionService(
         model_path=config_class.MODEL_PATH,
         preprocessor_path=config_class.PREPROCESSOR_PATH,

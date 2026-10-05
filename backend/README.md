@@ -135,13 +135,17 @@ The server will start on: **`http://localhost:5000`**
 
 ---
 
-### 2. Cancellation Prediction
+### 2. Cancellation Prediction (with Supabase History Lookup)
 - **URL**: `POST /api/predict`
 - **Headers**: `Content-Type: application/json`
-- **Request Body (25 Raw Booking Features)**:
-> Note: `total_stay`, `total_guests`, and `is_family` are engineered features automatically calculated by the backend from `stays_in_weekend_nights`, `stays_in_week_nights`, `adults`, `children`, and `babies`. The frontend does not need to send them.
+- **Request Body**:
+> **Automated Fields**:
+> 1. Provide `"email"`, and the backend queries your Supabase `bookings` table to automatically populate `is_repeated_guest`, `previous_cancellations`, and `previous_bookings_not_canceled`.
+> 2. `total_stay`, `total_guests`, and `is_family` are engineered features calculated automatically by the backend.
+> 3. The new booking is automatically saved to the Supabase `bookings` table with an assigned UUID.
 ```json
 {
+  "email": "customer@example.com",
   "hotel": "Resort Hotel",
   "lead_time": 50,
   "arrival_date_year": 2017,
@@ -153,9 +157,6 @@ The server will start on: **`http://localhost:5000`**
   "adults": 2,
   "children": 0,
   "babies": 0,
-  "is_repeated_guest": 0,
-  "previous_cancellations": 0,
-  "previous_bookings_not_canceled": 0,
   "adr": 120.5,
   "required_car_parking_spaces": 0,
   "total_of_special_requests": 1,
@@ -173,10 +174,18 @@ The server will start on: **`http://localhost:5000`**
 - **Successful Response (HTTP 200)**:
 ```json
 {
-  "success": true,
+  "booking_id": "3b5d5b1a-aa49-4b88-8f7e-c88d92e9062c",
+  "cancellation_probability": 0.42,
+  "customer_history": {
+    "is_repeated_guest": 0,
+    "previous_bookings_not_canceled": 0,
+    "previous_cancellations": 0,
+    "total_previous_bookings": 0
+  },
   "prediction": 0,
   "result": "Booking is unlikely to be cancelled.",
-  "cancellation_probability": 0.42
+  "saved_to_database": true,
+  "success": true
 }
 ```
 
