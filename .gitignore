@@ -36,6 +36,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.pytest_cache/
 
 # --- Node.js & Frontend ---
 **/node_modules/
