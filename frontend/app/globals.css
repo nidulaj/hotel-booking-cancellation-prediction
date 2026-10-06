@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Menlo, monospace;
+
+  /* Deep forest greens: dark surfaces (feature cards, toasts, overlays). */
+  --color-ink-950: #0a2418;
+  --color-ink-900: #0f3322;
+  --color-ink-800: #15432d;
+  --color-ink-700: #1d5a3c;
+
+  /* Primary green. */
+  --color-brand-50: #edf7f1;
+  --color-brand-100: #d4eedd;
+  --color-brand-200: #a9dcbd;
+  --color-brand-300: #77c496;
+  --color-brand-400: #4cab76;
+  --color-brand-500: #2e9160;
+  --color-brand-600: #1f7a4d;
+  --color-brand-700: #18633e;
+  --color-brand-800: #134e32;
+  --color-brand-900: #0e3b26;
+
+  /* App chrome. */
+  --color-canvas: #e8ebe9;
+  --color-panel: #f5f6f5;
+  --color-line: #e7e9e8;
+
+  --animate-fade-up: fade-up 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-slide-in: slide-in 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-pop: pop 0.18s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slide-in {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+}
+
+/* Styles for the desktop sidebar rail when <html data-sidebar="collapsed"> (set before paint). */
+@custom-variant collapsed (&:where([data-sidebar="collapsed"] .sb-rail, [data-sidebar="collapsed"] .sb-rail *));
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-canvas);
+  color: #111814;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Diagonal hatching used for "remaining" / "unfilled" portions of charts. */
+.hatch {
+  background-color: #fff;
+  background-image: repeating-linear-gradient(135deg, #7d8b84 0 2px, transparent 2px 7px);
+}
+.hatch-soft {
+  background-image: repeating-linear-gradient(135deg, rgba(125, 139, 132, 0.55) 0 2px, transparent 2px 7px);
+}
+
+/* ---------- Splash screen ---------- */
+html[data-splash="seen"] #splash {
+  display: none;
+}
+.splash-outline {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: splash-draw 0.9s cubic-bezier(0.65, 0, 0.35, 1) 0.1s forwards, splash-fade 0.4s ease 1.1s forwards;
+}
+.splash-fill {
+  opacity: 0;
+  transform-origin: 24px 24px;
+  transform: scale(0.92);
+  animation: splash-fill-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.75s forwards;
+}
+.splash-check {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: splash-draw 0.45s cubic-bezier(0.65, 0, 0.35, 1) 1.15s forwards;
+}
+.splash-ring {
+  box-shadow: 0 0 0 0 rgba(119, 196, 150, 0.45);
+  animation: splash-ring 1.4s ease-out 1.3s 1;
+}
+.splash-glow {
+  background: radial-gradient(circle, rgba(46, 145, 96, 0.35), transparent 65%);
+  animation: splash-breathe 2.4s ease-in-out infinite;
+}
+.splash-word {
+  opacity: 0;
+  animation: fade-up 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.9s forwards;
+}
+.splash-tag {
+  opacity: 0;
+  animation: fade-up 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) 1.1s forwards;
+}
+.splash-progress {
+  width: 0;
+  animation: splash-progress 1.7s cubic-bezier(0.4, 0, 0.2, 1) 0.3s forwards;
+}
+@keyframes splash-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes splash-fade {
+  to { opacity: 0; }
+}
+@keyframes splash-fill-in {
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes splash-ring {
+  to { box-shadow: 0 0 0 36px rgba(119, 196, 150, 0); }
+}
+@keyframes splash-breathe {
+  0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+}
+@keyframes splash-progress {
+  to { width: 100%; }
+}
+
+/* Hide number input spinners; steppers are provided instead. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  /* Skip the draw-in: show the finished mark straight away. */
+  .splash-outline { display: none; }
+  .splash-fill, .splash-word, .splash-tag { opacity: 1; transform: none; }
+  .splash-check { stroke-dashoffset: 0; }
+  .splash-progress { width: 100%; }
+}
